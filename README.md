@@ -22,7 +22,7 @@ This dApp currently simulates that process using a mocked smart contract and off
 ## File Structure
 
 
-`├── README.md └── selective-disclosure.ts`
+`├── README.md └── example-smart-contract.ts`
 
 - `example-smart-contract.ts`: TypeScript file that contains the entire logic for the dApp, including mock data, disclosure circuits, and use case examples.
 
