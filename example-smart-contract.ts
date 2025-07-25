@@ -7,12 +7,10 @@
 // renewing a government ID, enrolling for school, renting a new home,
 // or even applying for a job.
 
-// A smart contract has: ledger, constructor, witnesses, and circuits
 // ------------Ledger-------------
 
 // Simulate a ledger that stores personal data:
 //  This ledger is a simple in-memory storage for personal data, simulating a database.
-//  It uses a Record type to map directory handles to obfuscated personal data strings.
 let publicLedger: { data: PersonalDataStorage } = {
     data: {} as PersonalDataStorage
 };
@@ -38,13 +36,6 @@ function circuit_upload_data(): void {
 // -----------Circuit------------
 // Circuit for selective disclosure of personal data
 // This function simulates the selective disclosure of personal data based on a request.
-//  It takes a DisclosureRequest, which is an array of booleans indicating which data to
-//  disclose, and returns a DisclosureResult, which is a record of directory handles mapped
-//  to Maybe types of obfuscated strings.
-// This is a pure circuit, meaning it does not perform any side effects and only returns a value.
-// It is designed to be executed off-chain, allowing for efficient processing of selective disclosure requests.
-// Best practices: circuits are light and broken up:
-// circuits don't perform a function, they basically just return a value. A validator!
 function circuit_selective_disclosure(request: DisclosureRequest): DisclosureResult {
     // Retrieve the personal data from the ledger
     const data = witness_get_data();
@@ -55,15 +46,8 @@ function circuit_selective_disclosure(request: DisclosureRequest): DisclosureRes
 
 // -------------Dapp Logic--------------
 // dapp logic consists of: types and off-chain functions. 
-// the contract is written in compact, which gets converted to 
-// javascript when compiling, but it really is just the description 
-// of what is going to happen. It calls out to APIs and other functions 
-// to actually do the work. The logic itself of how it works lives as dapp
-// code or through APIs.
 
 // -------------Types--------------
-// lives in the dapp logic level -- doesn't live in the smart contract. More of a guide
-// The types that are declared in compact are declared by the compiler.
 type Opaque<T extends string> = string; // Opaque wrapper for obfuscated data
 type Maybe<T> = {is_some: boolean; value?: T}; // Type for optional data
 // PersonalData:
@@ -128,9 +112,6 @@ type DisclosureResult = Record<FileSystemDirectoryHandle, Maybe<Opaque<"string">
 //--------------Off-Chain Function--------------
 function perform_selective_disclosure(request: DisclosureRequest, data: PersonalDataStorage): DisclosureResult {
     // Iterate over the request and selectively disclose data
-    // off chain -- make a function as an argument of the circuit
-    // this would be dapp logic -- not in the contract itself
-    // pure circuit 
     const result: Partial<DisclosureResult> = {};
     for (const [key, value] of Object.entries(data)) {
         const index = parseInt(key as string, 10);
