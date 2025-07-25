@@ -63,6 +63,18 @@ This is _not_ a deployable contract but a helpful step in understanding what you
 5. **Use Case Examples**  
     Simulate different real-world data requests by customizing disclosure profiles for various service providers.
 
+### Structure Notes
+
+- Types like `Opaque<T>` and `Maybe<T>` are defined to model obfuscated data and optional values.
+- The `PersonalData` enum represents the full range of data that could be selectively disclosed, from name and age to medical history and employment records.
+- `DisclosureRequest` is an array of booleans, with each index corresponding to a `PersonalData` enum value, indicating whether that field should be disclosed.
+- The core logic lives in a function (`circuit_selective_disclosure`) that evaluates the request and returns only the permitted fields in a DisclosureResult.
+
+### Development Best Practices Modeled
+
+- Circuits should be pure and lightweight — no side effects or unnecessary iteration-heavy computation.
+- Iteration and heavy logic should be moved off-chain or to dApp-side helpers.
+- Smart contract functions should ideally only validate or return values, not mutate state directly (except in constructors or initializers).
 
 ## Concepts Demonstrated
 
