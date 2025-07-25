@@ -1,72 +1,113 @@
-# Midnight Template Repository
+# Example Proofshare dApp
 
-This GitHub repository should be used as a template when creating a new Midnight GitHub repository.
-The template is configured with default repository settings and a set of default files that are expected to exist in all Midnight GitHub repositories.
+A privacy-focused smart contract and dApp prototype demonstrating selective disclosure of personal data using Midnight Network.
 
-### LICENSE
+## Overview
 
-Apache 2.0.
+This project simulates a real-world scenario where individuals or families can selectively disclose only the necessary parts of their personal or dependent data—such as for signing up for daycare, applying for a job, or registering at a new clinic—while keeping all other information private.
 
-### README.md
+It demonstrates a core concept of **selective disclosure** using a zero-knowledge pattern, where the data owner proves something about their data (e.g., “this person is over 18 and has valid insurance”) without revealing the data itself unless explicitly required.
 
-Provides a brief description for users and developers who want to understand the purpose, setup, and usage of the repository.
+## What Is Selective Disclosure?
 
-### SECURITY.md
+[Selective disclosure](https://docs.midnight.network/blog/web3-intro-selective-disclosure) is a privacy-preserving method where a user proves facts about their data without sharing all of it. This is especially powerful for sensitive applications like:
 
-Provides a brief description of the Midnight Foundation's security policy and how to properly disclose security issues.
+- Medical or school forms
+- Rental applications
+- Government ID renewals
+- Employment onboarding
 
-### CONTRIBUTING.md
+This dApp currently simulates that process using a mocked smart contract and off-chain logic in TypeScript.
 
-Provides guidelines for how people can contribute to the Midnight project.
-
-### CODEOWNERS
-
-Defines repository ownership rules.
-
-### ISSUE_TEMPLATE
-
-Provides templates for reporting various types of issues, such as: bug report, documentation improvement and feature request.
-
-### PULL_REQUEST_TEMPLATE
-
-Provides a template for a pull request.
-
-### CLA Assistant
-
-The Midnight Foundation appreciates contributions, and like many other open source projects asks contributors to sign a contributor
-License Agreement before accepting contributions. We use CLA assistant (https://github.com/cla-assistant/cla-assistant) to streamline the CLA
-signing process, enabling contributors to sign our CLAs directly within a GitHub pull request.
-
-### Dependabot
-
-The Midnight Foundation uses GitHub Dependabot feature to keep our projects dependencies up-to-date and address potential security vulnerabilities. 
-
-### Checkmarx
-
-The Midnight Foundation uses Checkmarx for application security (AppSec) to identify and fix security vulnerabilities.
-All repositories are scanned with Checkmarx's suite of tools including: Static Application Security Testing (SAST), Infrastructure as Code (IaC), Software Composition Analysis (SCA), API Security, Container Security and Supply Chain Scans (SCS).
-
-### Unito
-
-Facilitates two-way data synchronization, automated workflows and streamline processes between: Jira, GitHub issues and Github project Kanban board. 
-
-# TODO - New Repo Owner
-
-### Software Package Data Exchange (SPDX)
-Include the following Software Package Data Exchange (SPDX) short-form identifier in a comment at the top headers of each source code file.
+## File Structure
 
 
- <I>// This file is part of <B>REPLACE WITH REPO-NAME</B>.<BR>
- // Copyright (C) 2025 Midnight Foundation<BR>
- // SPDX-License-Identifier: Apache-2.0<BR>
- // Licensed under the Apache License, Version 2.0 (the "License");<BR>
- // You may not use this file except in compliance with the License.<BR>
- // You may obtain a copy of the License at<BR>
- //<BR>
- //	http://www.apache.org/licenses/LICENSE-2.0<BR>
- //<BR>
- // Unless required by applicable law or agreed to in writing, software<BR>
- // distributed under the License is distributed on an "AS IS" BASIS,<BR>
- // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.<BR>
- // See the License for the specific language governing permissions and<BR>
- // limitations under the License.</I>
+`├── README.md └── example-smart-contract.ts`
+
+- `example-smart-contract.ts`: TypeScript file that contains the entire logic for the dApp, including mock data, disclosure circuits, and use case examples.
+
+### About `example-smart-contract.ts`
+
+The `example-smart-contract.ts` file is a **mock smart contract** written in TypeScript. It’s designed as an educational tool to demonstrate what a smart contract _could_ look like before transitioning into a real implementation in Compact on the Midnight Network.
+
+It follows smart contract patterns such as:
+
+- Ledgers: storing user data
+- Constructors: initializing that data
+- Circuits: simulating verification and selective disclosure logic
+- Off-chain logic: to perform the actual work while maintaining privacy boundaries
+
+This is _not_ a deployable contract but a helpful step in understanding what your Compact contract will eventually do and how your dApp logic might call it.
+
+### Features
+- Simulated smart contract structure with **ledger**, **constructor**, and **circuits**
+- Off-chain logic that performs **selective disclosure** from obfuscated personal data
+- Mock dataset of a fictional user ("Riley") with dozens of personal data fields
+- Example disclosure requests for:
+    - Doctor’s office
+    - Job application
+    - Rental application
+    - School enrollment
+    - Government ID renewal
+
+### How It Works
+
+1. **Personal Data Ledger**  
+    Simulates an on-chain or private data store with obfuscated personal information.
+2. **Constructor Function**  
+    Loads user data into the ledger (in this mock, Riley's data).
+3. **Selective Disclosure Circuit**  
+    Accepts a request indicating which fields to disclose and returns only those fields as valid, obfuscated results.
+4. **Off-Chain Logic**  
+    Implements the core selective disclosure functionality. Mimics the behavior of a zero-knowledge proof without full cryptographic infrastructure.
+5. **Use Case Examples**  
+    Simulate different real-world data requests by customizing disclosure profiles for various service providers.
+
+### Structure Notes
+
+- Types like `Opaque<T>` and `Maybe<T>` are defined to model obfuscated data and optional values.
+- The `PersonalData` enum represents the full range of data that could be selectively disclosed, from name and age to medical history and employment records.
+- `DisclosureRequest` is an array of booleans, with each index corresponding to a `PersonalData` enum value, indicating whether that field should be disclosed.
+- The core logic lives in a function (`circuit_selective_disclosure`) that evaluates the request and returns only the permitted fields in a DisclosureResult.
+
+### Development Best Practices Modeled
+
+- Circuits should be pure and lightweight — no side effects or unnecessary iteration-heavy computation.
+- Iteration and heavy logic should be moved off-chain or to dApp-side helpers.
+- Smart contract functions should ideally only validate or return values, not mutate state directly (except in constructors or initializers).
+
+## Concepts Demonstrated
+
+- Privacy-first data architecture: Inspired by real-world needs to minimize oversharing of sensitive data.
+- Smart contract patterning: Simulates how data can be verified and validated without exposure.
+- User-centric disclosure: Data owner remains in control at all times.
+
+## Example Use Case: Doctor's Office
+
+Instead of filling out a full medical history form, the user can choose to share just the relevant fields:
+
+```
+doctorDisclosureRequest[PersonalData.name] = true; doctorDisclosureRequest[PersonalData.age] = true; doctorDisclosureRequest[PersonalData.healthRecords] = true;
+```
+This keeps everything else—like social security number, address, or employment history—hidden and safe.
+
+## Future Work
+
+This mock serves as a stepping stone toward a full dApp using Midnight's privacy-preserving stack. Future enhancements will include:
+
+- Writing a functional actual smart contract using Compact
+- Integrating real zero-knowledge proofs
+- Adding a front-end UI for user interaction and data requests
+- Implementing APIs or a storage layer for private off-chain data management
+
+## Built With
+
+- TypeScript
+- Midnight smart contract architecture (modeled via Compact pattern)
+- Privacy-first dApp design principles
+
+## Further Reading:
+ - [Midnight Dev Diaries: Understanding Selective Disclosure](https://docs.midnight.network/blog/web3-intro-selective-disclosure)
+
+## Authors
+- Developed by Samantha Holstine
