@@ -1,8 +1,8 @@
-# example-proofshare
+# Example Proofshare dApp
 
 A privacy-focused smart contract and dApp prototype demonstrating selective disclosure of personal data using Midnight Network.
 
-## Project Overview
+## Overview
 
 This project simulates a real-world scenario where individuals or families can selectively disclose only the necessary parts of their personal or dependent data—such as for signing up for daycare, applying for a job, or registering at a new clinic—while keeping all other information private.
 
