@@ -1,26 +1,19 @@
-// This code is a TypeScript example for explaining selective
-//  disclosure of personal data.
-// It defines a type for personal data and a function to simulate
-//  selective disclosure, which allows users to share only specific
-//  pieces of their personal information to protect their privacy when
-// interacting with web services, like a form for a doctor's office, 
-// renewing a government ID, enrolling for school, renting a new home,
-// or even applying for a job.
+// TypeScript example demonstrating selective disclosure of personal data. 
+// It defines a data type and a function to share only specific chosen details, 
+// useful for forms at a doctor’s office, school, job applications, etc.
 
 // ------------Ledger-------------
 
-// Simulate a ledger that stores personal data:
-//  This ledger is a simple in-memory storage for personal data, simulating a database.
+// In-memory ledger simulating a personal data database
 let publicLedger: { data: PersonalDataStorage } = {
     data: {} as PersonalDataStorage
 };
 
 // ---------Witness------------
 
-// This function simulates retrieving personal data from the ledger.
-    // In a real-world scenario, this would involve fetching data from a database or secure storage.
+// Simulates fetching personal data (from a database in real life)
 function witness_get_data(): PersonalDataStorage {
-    return rileyData; // For this example, we return Riley's data directly, as their data should not be pre-loaded on-chain.
+    return rileyData; // Riley’s data isn’t preloaded on-chain for privacy.
 }
 
 
@@ -34,12 +27,11 @@ function circuit_upload_data(): void {
 
 
 // -----------Circuit------------
-// Circuit for selective disclosure of personal data
-// This function simulates the selective disclosure of personal data based on a request.
+// Circuit simulating selective disclosure based on a request
 function circuit_selective_disclosure(request: DisclosureRequest): DisclosureResult {
     // Retrieve the personal data from the ledger
     const data = witness_get_data();
-    return perform_selective_disclosure(request, data); // Call the off-chain function to perform selective disclosure
+    return perform_selective_disclosure(request, data); // Perform selective disclosure off-chain
 }
 
 // --------------------------------------------------------------------
