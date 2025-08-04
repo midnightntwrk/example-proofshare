@@ -1,6 +1,9 @@
 # Example Proofshare dApp
 
-A privacy-focused smart contract and dApp prototype demonstrating selective disclosure of personal data using Midnight Network.
+🚧 🚧 🚧  
+This GitHub repository is actively under construction. It will provide a privacy-focused smart contract and dApp prototype demonstrating selective disclosure of personal data using Midnight Network.
+This template is meant to be an example for developers to understand how Compact and MidnightJS work and is not intended for production.  
+🚧 🚧 🚧
 
 ## Overview
 
