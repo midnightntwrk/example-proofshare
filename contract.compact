@@ -1,0 +1,52 @@
+pragma language_version 0.16;
+
+import CompactStandardLibrary;
+
+// NOTE: to keep this simple, I only have 4 fields in the
+// disclosure request and result.
+// This will be updated in the future to include more fields
+// as more of the dApp is built out.
+// This contract is under construction-- any feedback is welcome!
+
+// Struct for selective disclosure request: the user 
+// specifies which fields to disclose for off-chain
+// function
+struct DisclosureRequest {
+  disclose_name: Boolean,
+  disclose_age: Boolean,
+  disclose_ssn: Boolean,
+  disclose_degree: Boolean
+}
+
+// Struct for disclosure result: contains the disclosed
+// fields based on the request, using Maybe type to
+// indicate some fields may be omitted
+struct DisclosureResult {
+  name: Maybe<Opaque<"string">>,
+  age: Maybe<Uint<64>>,
+  ssn: Maybe<Opaque<"string">>,
+  has_degree: Maybe<Boolean>
+}
+
+// Ledger for storing public, selectively disclosed info
+export ledger $disclosed_data: DisclosureResult;
+
+// Witness function: this calls a typescript function to
+// provide disclosed private data from off-chain into the contract
+witness local_personal_data(request: DisclosureRequest): DisclosureResult;
+
+// Constructor uploads empty initial disclosure state
+constructor() {
+  $disclosed_data = DisclosureResult {
+    name: none<Opaque<"string">>(),
+    age: none<Uint<64>>(),
+    ssn: none<Opaque<"string">>(),
+    has_degree: none<Boolean>()
+  };
+}
+
+// Circuit to update the ledger with disclosed data based on
+// the selective disclosure witness function
+export circuit selective_disclosure(request: DisclosureRequest): [] {
+    $disclosed_data = disclose(local_personal_data(request));
+}
