@@ -25,10 +25,16 @@ This dApp currently simulates that process using a mocked smart contract and off
 ## File Structure
 
 
-`├── README.md └── example-smart-contract.ts`
+```
+├── README.md  
+├── example-smart-contract.ts  
+└── contract.compact
+```
 
 - `example-smart-contract.ts`: TypeScript file that contains the entire logic for the dApp, including mock data, disclosure circuits, and use case examples.
+- `contract.compact`: A Compact smart contract implementing the on-chain logic for selective disclosure, structured to align with the simulated model in the TypeScript file. This contract is currently under construction, so any feedback is welcome!
 
+  
 ### About `example-smart-contract.ts`
 
 The `example-smart-contract.ts` file is a **mock smart contract** written in TypeScript. It’s designed as an educational tool to demonstrate what a smart contract _could_ look like before transitioning into a real implementation in Compact on the Midnight Network.
@@ -105,6 +111,7 @@ This mock serves as a stepping stone toward a full dApp using Midnight's privacy
 
 ## Built With
 
+- Compact
 - TypeScript
 - Midnight smart contract architecture (modeled via Compact pattern)
 - Privacy-first dApp design principles
