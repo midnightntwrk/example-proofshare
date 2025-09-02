@@ -10,7 +10,7 @@
 // No private data is stored on-chain. Instead, the contract 
 // manages commitments and verifies access via proofs
 
-pragma language_version 0.16;
+pragma language_version 0.17;
 
 import CompactStandardLibrary;
 
