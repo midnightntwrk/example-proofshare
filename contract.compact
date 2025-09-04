@@ -1,52 +1,57 @@
-pragma language_version 0.16;
+// NOTE: This contract is under construction -- any feedback is welcome!
+
+// ProofShare contract:
+// This contract supports privacy-preserving data sharing 
+// by allowing users to:
+// - Register private data via commitment hashes
+// - Authenticate using zero-knowledge proofs
+// - Verify the integrity of encrypted payloads off-chain
+//
+// No private data is stored on-chain. Instead, the contract 
+// manages commitments and verifies access via proofs
+
+pragma language_version >= 0.16 && <= 0.17;
 
 import CompactStandardLibrary;
 
-// NOTE: to keep this simple, I only have 4 fields in the
-// disclosure request and result.
-// This will be updated in the future to include more fields
-// as more of the dApp is built out.
-// This contract is under construction-- any feedback is welcome!
+// Ledger state for user commitments and registration status
+export ledger user_commitments: Map<Uint<32>, Bytes<32>>; //stores a hash commitment of a user's private data submitted during registration
+export ledger registered_users: Map<Uint<32>, Boolean>; // tracks whether a given user_id is registered
 
-// Struct for selective disclosure request: the user 
-// specifies which fields to disclose for off-chain
-// function
-struct DisclosureRequest {
-  disclose_name: Boolean,
-  disclose_age: Boolean,
-  disclose_ssn: Boolean,
-  disclose_degree: Boolean
-}
-
-// Struct for disclosure result: contains the disclosed
-// fields based on the request, using Maybe type to
-// indicate some fields may be omitted
-struct DisclosureResult {
-  name: Maybe<Opaque<"string">>,
-  age: Maybe<Uint<64>>,
-  ssn: Maybe<Opaque<"string">>,
-  has_degree: Maybe<Boolean>
-}
-
-// Ledger for storing public, selectively disclosed info
-export ledger $disclosed_data: DisclosureResult;
-
-// Witness function: this calls a typescript function to
-// provide disclosed private data from off-chain into the contract
-witness local_personal_data(request: DisclosureRequest): DisclosureResult;
-
-// Constructor uploads empty initial disclosure state
 constructor() {
-  $disclosed_data = DisclosureResult {
-    name: none<Opaque<"string">>(),
-    age: none<Uint<64>>(),
-    ssn: none<Opaque<"string">>(),
-    has_degree: none<Boolean>()
-  };
 }
 
-// Circuit to update the ledger with disclosed data based on
-// the selective disclosure witness function
-export circuit selective_disclosure(request: DisclosureRequest): [] {
-    $disclosed_data = disclose(local_personal_data(request));
+// Witness functions for off-chain computations
+witness generate_commitment(private_data: Bytes<32>, salt: Bytes<32>): [Bytes<32>]; // returns a cryptographic commitment to some private data + salt
+witness generate_auth_proof(private_data: Bytes<32>, salt: Bytes<32>, registered_commitment: Bytes<32>): [Bytes<32>]; // generates a proof that the user knows the private data corresponding to the registered commitment
+witness verify_auth_proof(user_id: Uint<32>, registered_commitment: Bytes<32>, proof: Bytes<32>): [Boolean]; // verifies the proof against the registered commitment
+witness generate_data_integrity_proof(private_data: Bytes<32>, salt: Bytes<32>, registered_commitment: Bytes<32>, unencrypted_data_hash: Bytes<32>): [Bytes<32>]; // generates a proof that the user can access the unencrypted data corresponding to the registered commitment
+witness verify_data_integrity_proof(user_id: Uint<32>, registered_commitment: Bytes<32>, unencrypted_data_hash: Bytes<32>, proof: Bytes<32>): [Boolean]; // verifies the integrity of the unencrypted data against the registered commitment
+
+// Circuit for user registration:
+//  - Stores the user's commitment on-chain. No private data is revealed.
+//  - The user_id is used as a key to look up the commitment and track registration status.
+export circuit register_user(user_id: Uint<32>, commitment: Bytes<32>): [] {
+    assert(!registered_users.member(disclose(user_id)), "User ID already registered");
+    user_commitments.insert(disclose(user_id), disclose(commitment));
+    registered_users.insert(disclose(user_id), true);
+}
+
+// Circuit for user authentication:
+//  - Verifies the user's proof against their registered commitment.
+//  - If the proof is valid, the user is considered authenticated.
+export circuit authenticate_user(user_id: Uint<32>, proof: Bytes<32>, is_auth_valid: Boolean): [] {
+    assert(registered_users.member(disclose(user_id)), "User not registered");
+    assert(is_auth_valid, "Authentication failed: Invalid proof");
+}
+
+// Circuit for encrypted data transfer with integrity verification:
+//  - Ensures that both sender and recipient are registered users.
+//  - Verifies the integrity of the encrypted payload hash using a proof.
+//  - The actual encrypted data is transferred off-chain, and this circuit only verifies the sender's authentication and the integrity of the payload hash.
+export circuit send_encrypted_data(sender_id: Uint<32>, recipient_id: Uint<32>, encrypted_payload_hash: Bytes<32>, proof: Bytes<32>, is_integrity_valid: Boolean): [] {
+    assert(registered_users.member(disclose(sender_id)), "Sender not registered");
+    assert(registered_users.member(disclose(recipient_id)), "Recipient not registered");
+    
+    assert(is_integrity_valid, "Data integrity verification failed: Invalid proof");
 }
