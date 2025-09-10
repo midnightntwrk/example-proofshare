@@ -22,59 +22,111 @@ constructor() {
 }
 
 // Witness functions for off-chain computations
-witness generate_commitment(user_id: Uint<32>): Bytes<32>; // returns a cryptographic commitment to some private data bound to the user id
-witness verify_auth_proof(user_id: Uint<32>, registered_commitment: Bytes<32>, proof: Bytes<32>): Boolean; // verifies the proof against the registered commitment
-
-//verifies that an off-chain plaintext hashed to `unencrypted_data_hash`
-// corresponds to the registered commitment, and that the encrypted payload's hash
-// matches what was derived off-chain (binding the plaintext to the encrypted payload).
-witness verify_data_integrity_proof(
-  user_id: Uint<32>,
-  registered_commitment: Bytes<32>,
-  unencrypted_data_hash: Bytes<32>,
-  encrypted_payload_hash: Bytes<32>,
-  proof: Bytes<32>
-): Boolean;
+witness generate_private_key(userID: Uint<32>): Bytes<32>; // create and return a private key for each user. The private key will be hashed in-circuit
+witness reveal_private_key(userID: Uint<32>): Bytes<32>; // ensure the hash of the private key matches the user's private key
 
 
-// Circuit for User Registration: store commitment after checking it matches the user's private data.
-export circuit register_user(user_id: Uint<32>, commitment: Bytes<32>): [] {
-  assert(!registered_users.member(disclose(user_id)), "User ID already registered");
+// Helper circuits
+// (Hashing is done in-circuit so the proof is enforced on-chain)
 
-  // Bind on-chain commitment to the off-chain private data via witness function.
-  const matches_private = disclose(generate_commitment(user_id)) == commitment;
-  assert(matches_private, "Commitment does not match user's private data");
-
-  user_commitments.insert(disclose(user_id), disclose(commitment));
-  registered_users.insert(disclose(user_id), true);
+// Compute hash of user's private key
+export circuit compute_key_digest(privateKey: Bytes<32>): Bytes<32> {
+  return persistentHash<Bytes<32>>(privateKey);
 }
 
-// Circuit for User Authentication: consume proof by verifying it against the stored commitment.
-export circuit authenticate_user(user_id: Uint<32>, proof: Bytes<32>): [] {
-  assert(registered_users.member(disclose(user_id)), "User not registered");
-
-  // Fetch registered commitment and verify the proof via witness.
-  const registered_commitment = user_commitments.lookup(disclose(user_id));
-  const ok = disclose(verify_auth_proof(user_id, registered_commitment, proof));
-  assert(ok, "Authentication failed: invalid proof");
+// Compute commitment: hash of userID and keyDigest
+export circuit compute_commitment(userId: Uint<32>, keyDigest: Bytes<32>): Bytes<32> {
+  return persistentHash<[Uint<32>, Bytes<32>]>([userId, keyDigest]);
 }
 
-// Circuit for Encrypted Data transfer (with integrity verification): consume both the proof and the payload hash.
-export circuit send_encrypted_data(sender_id: Uint<32>, recipient_id: Uint<32>, unencrypted_data_hash: Bytes<32>, encrypted_payload_hash: Bytes<32>, proof: Bytes<32>): [] {
-  assert(registered_users.member(disclose(sender_id)), "Sender not registered");
-  assert(registered_users.member(disclose(recipient_id)), "Recipient not registered");
-
-  // Verify that the plaintext hash corresponds to the registered commitment AND
-  // that the encrypted payload hash is correctly derived/bound to that plaintext.
-  const registered_commitment = user_commitments.lookup(disclose(sender_id));
-  const integrityVerified = disclose(
-    verify_data_integrity_proof(
-      sender_id,
-      registered_commitment,
-      unencrypted_data_hash,
-      encrypted_payload_hash,
-      proof
-    )
+// Compute an auth proof by domain-separating (namespacing) and hashing the commitment, randomChallenge, and keyDigest
+//  so the contract can recompute and verify client proofs
+export circuit compute_auth_proof(
+  commitment: Bytes<32>,
+  randomChallenge: Bytes<32>, // random nonce
+  keyDigest: Bytes<32>
+): Bytes<32> {
+  // create a tag so other hashes can’t collide
+  const tag = pad(32, "proofshare:auth");
+  return persistentHash<[Bytes<32>, Bytes<32>, Bytes<32>, Bytes<32>]>(
+    [tag, commitment, randomChallenge, keyDigest]
   );
-  assert(integrityVerified, "Data integrity verification failed: invalid proof");
+}
+
+// Computes the expected data-integrity proof by domain-separating (namespacing) and hashing commitment, plaintext hash,
+//  ciphertext hash, and keyDigest so the contract can can recompute and verify client proofs
+export circuit compute_integrity_proof(
+  commitment: Bytes<32>,
+  unencryptedHash: Bytes<32>, // off-chain calculated hash
+  encryptedHash: Bytes<32>, // hash of the ciphertext transmitted off-chain
+  keyDigest: Bytes<32>
+): Bytes<32> {
+  const tag = pad(32, "proofshare:integ");
+  return persistentHash<[Bytes<32>, Bytes<32>, Bytes<32>, Bytes<32>, Bytes<32>]>(
+    [tag, commitment, unencryptedHash, encryptedHash, keyDigest]
+  );
+}
+
+// Circuits
+
+// Circuit for User Registration: create commitment from user's private key and store it
+//  - Ensure the user isn't already registered
+//  - Derive private key and commitment
+//  - Write commitment to the ledger and mark the user as registered
+export circuit register_user(userID: Uint<32>, commitment: Bytes<32>): [] {
+  assert(!registeredUsers.member(disclose(userID)), "User ID already registered");
+
+  // Bring the private key in via witness function, derive private key and commitment in-circuit
+  const privateKey   = generate_private_key(userID);
+  const keyDigest = compute_key_digest(privateKey);
+  const commitment    = compute_commitment(userID, keyDigest);
+
+  // Store commitment: explicit disclosure of derived witness data
+  userCommitments.insert(disclose(userID), disclose(commitment));
+  registeredUsers.insert(disclose(userID));
+
+}
+
+// Circuit for User Authentication: consume proof by verifying it against the stored commitment
+//  - Requires the user to be registered
+//  - Recomputes an auth proof in-circuit from the commitment, random challenge, and keyDigests
+//  - Compares that to the provided proof
+export circuit authenticate_user(userId: Uint<32>, challenge: Bytes<32>, proof: Bytes<32>): [] {
+  // Ensure caller is a registered user
+  assert(registeredUsers.member(disclose(userId)), "User not registered");
+
+// Load the user's stored commitment, the hash of the private key, and derive the proof
+  const commitment = userCommitments.lookup(disclose(userId));
+  const keyDigest  = reveal_private_key(userId);                 
+  const expected   = compute_auth_proof(commitment, challenge, keyDigest);
+
+  assert(expected == proof, "Authentication failed: invalid proof");
+}
+
+// Circuit for proving specific data was sent 
+//  - Requires both sender and recipient to be registered
+//  - Recomputes an integrity proof in-circuit the commitment, plaintext hash, ciphertext hash, and keyDigest
+//  - Verifies the provided proof matches
+export circuit send_encrypted_data(
+  senderId: Uint<32>,
+  recipientId: Uint<32>,
+  unencryptedDataHash: Bytes<32>,
+  encryptedPayloadHash: Bytes<32>,
+  proof: Bytes<32>
+): [] {
+  // Ensure both sender and recipient are registered
+  assert(registeredUsers.member(disclose(senderId)), "Sender not registered");
+  assert(registeredUsers.member(disclose(recipientId)), "Recipient not registered");
+
+  // Load the sender's stored commitment, the hash of the private key, and derive the proof
+  const commitment = userCommitments.lookup(disclose(senderId));
+  const keyDigest  = reveal_private_key(senderId);
+  const expected   = compute_integrity_proof(
+    commitment,
+    unencryptedDataHash,
+    encryptedPayloadHash,
+    keyDigest
+  );
+
+  assert(expected == proof, "Data integrity verification failed: invalid proof");
 }
