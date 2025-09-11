@@ -15,8 +15,8 @@ pragma language_version >= 0.16 && <= 0.17;
 import CompactStandardLibrary;
 
 // Ledger state for user commitments and registration status
-export ledger user_commitments: Map<Uint<32>, Bytes<32>>; //stores a hash commitment of a user's private data submitted during registration
-export ledger registered_users: Map<Uint<32>, Boolean>; // tracks whether a given user_id is registered
+export ledger userCommitments: Map<Uint<32>, Bytes<32>>; //stores a hash commitment of a user's private data submitted during registration
+export ledger registeredUsers: Map<Uint<32>, Boolean>; // tracks whether a given user_id is registered
 
 constructor() {
 }
