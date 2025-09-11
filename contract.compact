@@ -16,10 +16,10 @@ import CompactStandardLibrary;
 
 // Ledger state for user commitments and registration status
 export ledger userCommitments: Map<Uint<32>, Bytes<32>>; //stores a hash commitment of a user's private data submitted during registration
-export ledger registeredUsers: Map<Uint<32>, Boolean>; // tracks whether a given user_id is registered
+export ledger registeredUsers: Set<Uint<32>>; // set of userIDs that have successfully registered
 
-constructor() {
-}
+constructor() {}
+
 
 // Witness functions for off-chain computations
 witness generate_private_key(userID: Uint<32>): Bytes<32>; // create and return a private key for each user. The private key will be hashed in-circuit
@@ -27,18 +27,16 @@ witness reveal_private_key(userID: Uint<32>): Bytes<32>; // ensure the hash of t
 
 
 // Helper circuits
-// (Hashing is done in-circuit so the proof is enforced on-chain)
+// (Hashing is done in-circuit so the proof is enforced on-chain.)
 
 // Compute hash of user's private key
 export circuit compute_key_digest(privateKey: Bytes<32>): Bytes<32> {
   return persistentHash<Bytes<32>>(privateKey);
 }
-
 // Compute commitment: hash of userID and keyDigest
 export circuit compute_commitment(userId: Uint<32>, keyDigest: Bytes<32>): Bytes<32> {
   return persistentHash<[Uint<32>, Bytes<32>]>([userId, keyDigest]);
 }
-
 // Compute an auth proof by domain-separating (namespacing) and hashing the commitment, randomChallenge, and keyDigest
 //  so the contract can recompute and verify client proofs
 export circuit compute_auth_proof(
@@ -52,9 +50,8 @@ export circuit compute_auth_proof(
     [tag, commitment, randomChallenge, keyDigest]
   );
 }
-
 // Computes the expected data-integrity proof by domain-separating (namespacing) and hashing commitment, plaintext hash,
-//  ciphertext hash, and keyDigest so the contract can can recompute and verify client proofs
+//  ciphertext hash, and keyDigest so the contract can recompute and verify client proofs
 export circuit compute_integrity_proof(
   commitment: Bytes<32>,
   unencryptedHash: Bytes<32>, // off-chain calculated hash
@@ -66,8 +63,6 @@ export circuit compute_integrity_proof(
     [tag, commitment, unencryptedHash, encryptedHash, keyDigest]
   );
 }
-
-// Circuits
 
 // Circuit for User Registration: create commitment from user's private key and store it
 //  - Ensure the user isn't already registered
@@ -87,10 +82,10 @@ export circuit register_user(userID: Uint<32>, commitment: Bytes<32>): [] {
 
 }
 
-// Circuit for User Authentication: consume proof by verifying it against the stored commitment
-//  - Requires the user to be registered
+// Circuit for User Authentication: consume proof by verifying it against the stored commitment.
+//  - Requires the user to be registered.
 //  - Recomputes an auth proof in-circuit from the commitment, random challenge, and keyDigests
-//  - Compares that to the provided proof
+//  - Compares that to the provided `proof`
 export circuit authenticate_user(userId: Uint<32>, challenge: Bytes<32>, proof: Bytes<32>): [] {
   // Ensure caller is a registered user
   assert(registeredUsers.member(disclose(userId)), "User not registered");
@@ -104,8 +99,8 @@ export circuit authenticate_user(userId: Uint<32>, challenge: Bytes<32>, proof: 
 }
 
 // Circuit for proving specific data was sent 
-//  - Requires both sender and recipient to be registered
-//  - Recomputes an integrity proof in-circuit the commitment, plaintext hash, ciphertext hash, and keyDigest
+//  - Requires both sender and recipient to be registered.
+//  - Recomputes an integrity proof in-circuit the commitment, plaintext hash, ciphertext hash, and keyDigest.
 //  - Verifies the provided proof matches
 export circuit send_encrypted_data(
   senderId: Uint<32>,
